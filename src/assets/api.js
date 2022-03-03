@@ -1,9 +1,10 @@
 import { EventEmitter } from 'events';
+import config from '@/../config.js';
 
 export default class Client {
   constructor(apiKey) {
     this.events = new EventEmitter();
-    this.apiKey = apiKey;
+    this.apiKey = apiKey || config.apiKey;
     this.connect();
   }
 

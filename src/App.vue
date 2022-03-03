@@ -4,9 +4,7 @@ import {
 } from 'vue';
 import Client from './assets/api.js';
 
-const API_KEY = 'fede4a25aba43d0b61fb7c9433f4cfdd23a1201cd818f2055e5418c6225b9a14';
-
-const client = new Client(API_KEY);
+const client = new Client();
 
 const tickerData = reactive({
   ticker: 'BTC',
@@ -44,8 +42,8 @@ function updateGraphMaxBars() {
 
 function addTicker() {
   const ticker = tickerData.ticker.toUpperCase();
-  const tickerIsExost = tickerData.tickerList.find((t) => t.name === ticker);
-  if (tickerIsExost) {
+  const tickerIsExist = tickerData.tickerList.find((t) => t.name === ticker);
+  if (tickerIsExist) {
     tickerData.showTickerError = true;
     return;
   }
@@ -230,7 +228,7 @@ visualViewport.addEventListener('resize', () => {
         >
           <div
             v-for="(bar, index) in graph.bars"
-            :key="index + bar"
+            :key="index"
             class="graph-bar bg-purple-800 border w-10"
             :style="{height: `${normilizeGraph(bar)}%`}"
           />
