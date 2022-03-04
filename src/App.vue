@@ -1,6 +1,6 @@
 <script setup>
 import {
-  ref, onMounted, reactive, watch, nextTick,
+  ref, onMounted, onBeforeUnmount, reactive, watch, nextTick,
 } from 'vue';
 import Client from './assets/api.js';
 
@@ -13,10 +13,14 @@ const tickerData = reactive({
   showTickerError: false,
 });
 
+const graphContainer = ref(null);
+const BAR_WIDTH = 38;
+const graphMaxBars = Math.floor(window.screen.availWidth / BAR_WIDTH);
+
 const graph = reactive({
   bars: [],
   hideBars: [],
-  maxBars: 0,
+  visibleBars: 1,
 });
 
 const loaderShow = ref(true);
@@ -27,18 +31,14 @@ onMounted(() => {
 
 watch(() => tickerData.selectedTicker, () => {
   graph.bars = [];
+  nextTick(calculateGraphVisibleBars);
 });
 
-function normilizeGraph(price) {
-  const max = Math.max(...graph.bars);
-  const min = Math.min(...graph.bars);
-  return 5 + ((price - min) * 100) / (max - min);
-}
+window.addEventListener('resize', calculateGraphVisibleBars);
 
-function updateGraphMaxBars() {
-  const wBar = document.querySelector('.graph-bar').clientWidth;
-  graph.maxBars = Math.floor(document.getElementById('graph').clientWidth / wBar);
-}
+onBeforeUnmount(() => {
+  window.removeEventListener(calculateGraphVisibleBars);
+});
 
 function addTicker() {
   const ticker = tickerData.ticker.toUpperCase();
@@ -57,21 +57,17 @@ function addTicker() {
 
   tickerData.tickerList.push(newTicker);
 
-  client.subscribe(tickerData.ticker, ({ name, price }) => {
-    if (newTicker.name !== name) return;
-    newTicker.price = price > 0 ? price.toFixed(2) : price.toPrecision(2);
+  client.subscribe(newTicker.name, updateTicker);
+}
 
-    if (tickerData.selectedTicker !== null && newTicker.name === tickerData.selectedTicker.name) {
-      if (graph.bars.length >= graph.maxBars) {
-        const newSize = graph.maxBars - 1;
-        graph.bars = graph.bars.splice(-newSize);
-      }
-      graph.bars.push(price);
-      nextTick(() => {
-        updateGraphMaxBars();
-      });
-    }
-  });
+function updateTicker({ name, price }) {
+  const ticker = tickerData.tickerList.find((t) => t.name === name);
+  ticker.price = price > 0 ? price.toFixed(2) : price.toPrecision(2);
+
+  if (ticker.name === tickerData.selectedTicker?.name) {
+    resizeGraph();
+    graph.bars.push(price);
+  }
 }
 
 function removeTicker(ticker) {
@@ -82,17 +78,32 @@ function removeTicker(ticker) {
   }
 }
 
-visualViewport.addEventListener('resize', () => {
-  if (!tickerData.selectedTicker) return;
-  const oldMax = graph.maxBars;
-  updateGraphMaxBars();
-  if (oldMax > graph.maxBars) {
-    graph.hideBars = graph.bars.splice(0, oldMax - graph.maxBars);
-  } else {
-    graph.bars = [...graph.hideBars, ...graph.bars];
-    graph.hideBars = [];
+function resizeGraph() {
+  if (graph.bars.length >= graphMaxBars) {
+    const newSize = graphMaxBars - 1;
+    graph.bars = graph.bars.splice(-newSize);
   }
-});
+}
+
+function normilizeGraph(price) {
+  const max = Math.max(...graph.bars);
+  const min = Math.min(...graph.bars);
+  return 5 + ((price - min) * 100) / (max - min);
+}
+
+function calculateGraphVisibleBars() {
+  if (!graphContainer.value) return;
+  graph.visibleBars = Math.floor(graphContainer.value.clientWidth / BAR_WIDTH);
+  resizeGraph();
+}
+
+function getVisibleBars() {
+  const diff = graph.visibleBars - graph.bars.length;
+  if (diff < 0) {
+    return graph.bars.slice(0, graph.visibleBars);
+  }
+  return graph.bars;
+}
 </script>
 
 <template>
@@ -216,50 +227,51 @@ visualViewport.addEventListener('resize', () => {
         <hr class="w-full border-t border-gray-600 my-4">
       </template>
       <section
-        v-if="tickerData.selectedTicker !== null"
+        v-if="tickerData.selectedTicker"
         class="relative"
       >
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
           {{ tickerData.selectedTicker.name }} - USD
         </h3>
         <div
-          id="graph"
+          ref="graphContainer"
           class="flex items-end border-gray-600 border-b border-l h-64"
         >
           <div
-            v-for="(bar, index) in graph.bars"
+            v-for="(bar, index) in getVisibleBars()"
             :key="index"
             class="graph-bar bg-purple-800 border w-10"
             :style="{height: `${normilizeGraph(bar)}%`}"
-          />
-        </div>
-        <button
-          type="button"
-          class="absolute top-0 right-0"
-          @click="tickerData.selectedTicker = null"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            xmlns:xlink="http://www.w3.org/1999/xlink"
-            xmlns:svgjs="http://svgjs.com/svgjs"
-            version="1.1"
-            width="30"
-            height="30"
-            x="0"
-            y="0"
-            viewBox="0 0 511.76 511.76"
-            style="enable-background: new 0 0 512 512"
-            xml:space="preserve"
           >
-            <g>
-              <path
-                d="M436.896,74.869c-99.84-99.819-262.208-99.819-362.048,0c-99.797,99.819-99.797,262.229,0,362.048    c49.92,49.899,115.477,74.837,181.035,74.837s131.093-24.939,181.013-74.837C536.715,337.099,536.715,174.688,436.896,74.869z     M361.461,331.317c8.341,8.341,8.341,21.824,0,30.165c-4.16,4.16-9.621,6.251-15.083,6.251c-5.461,0-10.923-2.091-15.083-6.251    l-75.413-75.435l-75.392,75.413c-4.181,4.16-9.643,6.251-15.083,6.251c-5.461,0-10.923-2.091-15.083-6.251    c-8.341-8.341-8.341-21.845,0-30.165l75.392-75.413l-75.413-75.413c-8.341-8.341-8.341-21.845,0-30.165    c8.32-8.341,21.824-8.341,30.165,0l75.413,75.413l75.413-75.413c8.341-8.341,21.824-8.341,30.165,0    c8.341,8.32,8.341,21.824,0,30.165l-75.413,75.413L361.461,331.317z"
-                fill="#718096"
-                data-original="#000000"
-              />
-            </g>
-          </svg>
-        </button>
+            <button
+              type="button"
+              class="absolute top-0 right-0"
+              @click="tickerData.selectedTicker = null"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                xmlns:xlink="http://www.w3.org/1999/xlink"
+                xmlns:svgjs="http://svgjs.com/svgjs"
+                version="1.1"
+                width="30"
+                height="30"
+                x="0"
+                y="0"
+                viewBox="0 0 511.76 511.76"
+                style="enable-background: new 0 0 512 512"
+                xml:space="preserve"
+              >
+                <g>
+                  <path
+                    d="M436.896,74.869c-99.84-99.819-262.208-99.819-362.048,0c-99.797,99.819-99.797,262.229,0,362.048    c49.92,49.899,115.477,74.837,181.035,74.837s131.093-24.939,181.013-74.837C536.715,337.099,536.715,174.688,436.896,74.869z     M361.461,331.317c8.341,8.341,8.341,21.824,0,30.165c-4.16,4.16-9.621,6.251-15.083,6.251c-5.461,0-10.923-2.091-15.083-6.251    l-75.413-75.435l-75.392,75.413c-4.181,4.16-9.643,6.251-15.083,6.251c-5.461,0-10.923-2.091-15.083-6.251    c-8.341-8.341-8.341-21.845,0-30.165l75.392-75.413l-75.413-75.413c-8.341-8.341-8.341-21.845,0-30.165    c8.32-8.341,21.824-8.341,30.165,0l75.413,75.413l75.413-75.413c8.341-8.341,21.824-8.341,30.165,0    c8.341,8.32,8.341,21.824,0,30.165l-75.413,75.413L361.461,331.317z"
+                    fill="#718096"
+                    data-original="#000000"
+                  />
+                </g>
+              </svg>
+            </button>
+          </div>
+        </div>
       </section>
     </div>
   </div>

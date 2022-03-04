@@ -21,6 +21,7 @@ module.exports = {
       ignorePattern: 'class="([\\s\\S]*?)"|d="([\\s\\S]*?)"', // ignore classes or svg draw attributes
       ignoreUrls: true,
     }],
+    'no-use-before-define': ['error', { functions: false, classes: true, variables: true }],
   },
   settings: {
     'import/resolver': {
