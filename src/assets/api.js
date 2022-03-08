@@ -5,10 +5,9 @@ export default class Client {
   constructor(apiKey) {
     this.events = new EventEmitter();
     this.apiKey = apiKey || config.apiKey;
+    this.subscribers = new Map();
     this.connect();
   }
-
-  subscribers = new Map();
 
   connect() {
     this.ws = new WebSocket(`wss://streamer.cryptocompare.com/v2?api_key=${this.apiKey}`);

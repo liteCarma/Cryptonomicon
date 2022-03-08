@@ -37,7 +37,7 @@ watch(() => tickerData.selectedTicker, () => {
 window.addEventListener('resize', calculateGraphVisibleBars);
 
 onBeforeUnmount(() => {
-  window.removeEventListener(calculateGraphVisibleBars);
+  window.removeEventListener('resize', calculateGraphVisibleBars);
 });
 
 function addTicker() {
@@ -86,8 +86,9 @@ function resizeGraph() {
 }
 
 function normilizeGraph(price) {
-  const max = Math.max(...graph.bars);
-  const min = Math.min(...graph.bars);
+  const visibleBars = getVisibleBars();
+  const max = Math.max(...visibleBars);
+  const min = Math.min(...visibleBars);
   return 5 + ((price - min) * 100) / (max - min);
 }
 
@@ -100,7 +101,7 @@ function calculateGraphVisibleBars() {
 function getVisibleBars() {
   const diff = graph.visibleBars - graph.bars.length;
   if (diff < 0) {
-    return graph.bars.slice(0, graph.visibleBars);
+    return graph.bars.slice(-graph.visibleBars);
   }
   return graph.bars;
 }
