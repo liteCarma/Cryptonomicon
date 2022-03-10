@@ -30,7 +30,9 @@ export default class Client {
 
   send(msg) {
     if (this.ws.readyState === 0) {
-      this.ws.onopen = this.send(msg);
+      this.ws.addEventListener('open', () => {
+        this.ws.onopen = this.send(msg);
+      }, { once: true });
       return;
     }
 

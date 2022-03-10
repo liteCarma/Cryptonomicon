@@ -9,9 +9,11 @@ const client = new Client();
 const tickerData = reactive({
   ticker: '',
   selectedTicker: null,
-  tickerList: [],
+  tickerList: JSON.parse(localStorage.getItem('tickers') || '[]'),
   showTickerError: false,
 });
+
+tickerData.tickerList.forEach((t) => client.subscribe(t.name, updateTicker));
 
 const suggestedCoins = computed(() => client.getSuggested(tickerData.ticker, 4));
 
@@ -61,8 +63,8 @@ function addTicker() {
   });
 
   tickerData.tickerList.push(newTicker);
-
   client.subscribe(newTicker.name, updateTicker);
+  saveTickers();
 }
 
 function updateTicker({ name, price }) {
@@ -81,6 +83,7 @@ function removeTicker(ticker) {
   if (tickerData.selectedTicker === ticker) {
     tickerData.selectedTicker = null;
   }
+  saveTickers();
 }
 
 function resizeGraph() {
@@ -114,6 +117,10 @@ function getVisibleBars() {
 function suggestedClick(ticker) {
   tickerData.ticker = ticker.toUpperCase();
   nextTick(addTicker);
+}
+
+function saveTickers() {
+  localStorage.setItem('tickers', JSON.stringify(tickerData.tickerList));
 }
 </script>
 
