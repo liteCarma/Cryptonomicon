@@ -6,19 +6,39 @@ import Client from './assets/api.js';
 
 const client = new Client();
 
+const TICKERS_ON_PAGE = 6;
+const BAR_WIDTH = 38;
+
 const tickerData = reactive({
   ticker: '',
   selectedTicker: null,
   tickerList: JSON.parse(localStorage.getItem('tickers') || '[]'),
   showTickerError: false,
+  filter: '',
+  page: 1,
 });
 
 tickerData.tickerList.forEach((t) => client.subscribe(t.name, updateTicker));
 
 const suggestedCoins = computed(() => client.getSuggested(tickerData.ticker, 4));
 
+const filteredTickers = computed(() => tickerData.tickerList.filter((t) => t.name.includes(tickerData.filter.toUpperCase())));
+
+const paginatedTickers = computed(() => {
+  const start = (tickerData.page - 1) * TICKERS_ON_PAGE;
+  const end = tickerData.page * TICKERS_ON_PAGE;
+  return filteredTickers.value.slice(start, end);
+});
+
+const hasNextPage = computed(() => filteredTickers.value.length > tickerData.page * TICKERS_ON_PAGE);
+
+watch(paginatedTickers, () => {
+  if (paginatedTickers.value.length === 0) {
+    tickerData.page -= 1;
+  }
+});
+
 const graphContainer = ref(null);
-const BAR_WIDTH = 38;
 const graphMaxBars = Math.floor(window.screen.availWidth / BAR_WIDTH);
 
 const graph = reactive({
@@ -212,11 +232,40 @@ function saveTickers() {
           Добавить
         </button>
       </section>
+      <section>
+        <hr class="w-full border-t border-gray-600 my-4">
+        Фильтр:
+        <input
+          v-model.trim="tickerData.filter"
+          type="text"
+          class="pr-10 border-gray-300 text-gray-900 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm rounded-md"
+          @keyup.enter="addTicker"
+        >
+        <div>
+          <button
+            type="button"
+            class="my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600"
+            :class="tickerData.page > 1? 'hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500' : ''"
+            :disabled="tickerData.page === 1"
+            @click="tickerData.page -= 1"
+          >
+            Назад
+          </button>
+          <button
+            v-if="hasNextPage"
+            type="button"
+            class="ml-4 my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+            @click="tickerData.page += 1"
+          >
+            Вперед
+          </button>
+        </div>
+      </section>
       <template v-if="tickerData.tickerList.length > 0">
         <hr class="w-full border-t border-gray-600 my-4">
         <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
           <div
-            v-for="ticker of tickerData.tickerList"
+            v-for="ticker of paginatedTickers"
             :key="ticker.name"
             class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
             :class="{'border-4': ticker === tickerData.selectedTicker}"
