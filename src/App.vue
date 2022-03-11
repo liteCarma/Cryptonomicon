@@ -35,13 +35,14 @@ const paginatedTickers = computed(() => {
 const hasNextPage = computed(() => filteredTickers.value.length > tickerData.page * TICKERS_ON_PAGE);
 
 watch(paginatedTickers, () => {
-  if (paginatedTickers.value.length === 0 && tickerData.page > 1) {
-    tickerData.page -= 1;
-  }
   const url = new URL(window.location);
   url.searchParams.set('page', tickerData.page);
   url.searchParams.set('filter', tickerData.filter);
   window.history.pushState({}, '', url);
+});
+
+watch(() => tickerData.filter, () => {
+  tickerData.page = 1;
 });
 
 const graphContainer = ref(null);
@@ -83,6 +84,7 @@ function addTicker() {
   }
 
   tickerData.ticker = '';
+  tickerData.filter = '';
   const newTicker = reactive({
     name: ticker,
     price: '-',
@@ -268,6 +270,7 @@ function loadSearchParameters() {
           >
             Назад
           </button>
+          {{ tickerData.page }}
           <button
             v-if="hasNextPage"
             type="button"
