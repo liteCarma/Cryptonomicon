@@ -5,7 +5,6 @@ export default class Client {
   constructor(apiKey) {
     this.events = new EventEmitter();
     this.apiKey = apiKey || config.apiKey;
-    this.subscribers = new Map();
     this.coinList = {
       list: [],
       map: {},
@@ -20,7 +19,7 @@ export default class Client {
     this.ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (data.TYPE === '5' && data.PRICE) {
-        this.events.emit('newPrice', {
+        this.events.emit(`update:${data.FROMSYMBOL}`, {
           name: data.FROMSYMBOL,
           price: data.PRICE,
         });
@@ -50,9 +49,8 @@ export default class Client {
       action: 'SubAdd',
       subs: [`5~CCCAGG~${ticker.toUpperCase()}~USD`],
     });
-    this.subscribers.set(ticker, cb);
 
-    this.events.on('newPrice', cb);
+    this.events.on(`update:${ticker}`, cb);
   }
 
   unsubscribe(ticker) {
@@ -61,10 +59,7 @@ export default class Client {
       subs: [`5~CCCAGG~${ticker.toLowerCase()}~USD`],
     });
 
-    const listener = this.subscribers.get(ticker);
-    if (listener) {
-      this.events.removeListener('newPrice', listener);
-    }
+    this.events.removeAllListeners(`update:${ticker}`);
   }
 
   getcoinList() {
