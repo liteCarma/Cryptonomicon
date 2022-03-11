@@ -18,6 +18,8 @@ const tickerData = reactive({
   page: 1,
 });
 
+loadSearchParameters();
+
 tickerData.tickerList.forEach((t) => client.subscribe(t.name, updateTicker));
 
 const suggestedCoins = computed(() => client.getSuggested(tickerData.ticker, 4));
@@ -33,9 +35,13 @@ const paginatedTickers = computed(() => {
 const hasNextPage = computed(() => filteredTickers.value.length > tickerData.page * TICKERS_ON_PAGE);
 
 watch(paginatedTickers, () => {
-  if (paginatedTickers.value.length === 0) {
+  if (paginatedTickers.value.length === 0 && tickerData.page > 1) {
     tickerData.page -= 1;
   }
+  const url = new URL(window.location);
+  url.searchParams.set('page', tickerData.page);
+  url.searchParams.set('filter', tickerData.filter);
+  window.history.pushState({}, '', url);
 });
 
 const graphContainer = ref(null);
@@ -141,6 +147,17 @@ function suggestedClick(ticker) {
 
 function saveTickers() {
   localStorage.setItem('tickers', JSON.stringify(tickerData.tickerList));
+}
+
+function loadSearchParameters() {
+  const { searchParams } = new URL(window.location.href);
+  if (searchParams.has('page')) {
+    tickerData.page = +searchParams.get('page');
+  }
+
+  if (searchParams.has('filter')) {
+    tickerData.filter = searchParams.get('filter');
+  }
 }
 </script>
 
