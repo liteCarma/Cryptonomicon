@@ -6,6 +6,28 @@ import Client from './assets/api.js';
 
 const client = new Client();
 
+const coinList = {
+  list: [],
+  map: {},
+  lastSearchIndex: 0,
+};
+
+client.getCoinList()
+  .then((data) => {
+    const symbols = [];
+    const fullnames = [];
+    Object.values(data).forEach(({ Symbol, FullName }) => {
+      const symbol = Symbol.toUpperCase();
+      const fullname = FullName.toUpperCase().replace(/[\u200b]/, '');
+      coinList.map[symbol] = symbol;
+      coinList.map[fullname] = symbol;
+      symbols.push(Symbol);
+      fullnames.push(fullname);
+    });
+
+    coinList.list = [...symbols.sort(), ...fullnames.sort()];
+  });
+
 const TICKERS_ON_PAGE = 6;
 const BAR_WIDTH = 38;
 
@@ -22,7 +44,7 @@ loadSearchParameters();
 
 tickerData.tickerList.forEach((t) => client.subscribe(t.name, updateTicker));
 
-const suggestedCoins = computed(() => client.getSuggested(tickerData.ticker, 4));
+const suggestedTickers = computed(() => getSuggested(tickerData.ticker, 4));
 
 const filteredTickers = computed(() => tickerData.tickerList.filter((t) => t.name.includes(tickerData.filter.toUpperCase())));
 
@@ -142,6 +164,24 @@ function getVisibleBars() {
   return graph.bars;
 }
 
+function getSuggested(str, needSuggested) {
+  if (str.length <= coinList.lastSearchIndex) coinList.lastSearchIndex = 0;
+  if (!coinList.list || !str) return [];
+  const suggested = [];
+  for (let i = coinList.lastSearchIndex; i < coinList.list.length; i += 1) {
+    const ticker = coinList.list[i];
+    if (ticker.startsWith(str.toUpperCase())) {
+      suggested.push(ticker);
+      if (suggested.length === needSuggested) {
+        coinList.lastSearchIndex = i;
+        break;
+      }
+    }
+  }
+
+  return suggested.map((name) => coinList.map[name]);
+}
+
 function suggestedClick(ticker) {
   tickerData.ticker = ticker.toUpperCase();
   nextTick(addTicker);
@@ -210,11 +250,11 @@ function loadSearchParameters() {
               >
             </div>
             <div
-              v-if="suggestedCoins.length > 0"
+              v-if="suggestedTickers.length > 0"
               class="flex bg-white shadow-md p-1 rounded-md shadow-md flex-wrap"
             >
               <span
-                v-for="(ticker, index) of suggestedCoins"
+                v-for="(ticker, index) of suggestedTickers"
                 :key="index"
                 class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
                 @click="suggestedClick(ticker)"

@@ -10,7 +10,7 @@ export default class Client {
       map: {},
       lastSearchIndex: 0,
     };
-    this.getcoinList();
+    this.getCoinList();
     this.connect();
   }
 
@@ -62,42 +62,10 @@ export default class Client {
     this.events.removeAllListeners(`update:${ticker}`);
   }
 
-  getcoinList() {
+  getCoinList() {
     return fetch(`https://min-api.cryptocompare.com/data/all/coinlist?api_key=${this.apiKey}&summary=true`)
       .then((r) => r.json())
-      .then(({ Data }) => {
-        const { coinList } = this;
-        const symbols = [];
-        const fullnames = [];
-        Object.values(Data).forEach(({ Symbol, FullName }) => {
-          const symbol = Symbol.toUpperCase();
-          const fullname = FullName.toUpperCase().replace(/[\u200b]/, '');
-          coinList.map[symbol] = symbol;
-          coinList.map[fullname] = symbol;
-          symbols.push(Symbol);
-          fullnames.push(fullname);
-        });
-
-        coinList.list = [...symbols.sort(), ...fullnames.sort()];
-      })
+      .then(({ Data }) => Data)
       .catch(() => []);
-  }
-
-  getSuggested(str, needSuggested) {
-    if (str.length <= this.coinList.lastSearchIndex) this.coinList.lastSearchIndex = 0;
-    if (!this.coinList.list || !str) return [];
-    const suggested = [];
-    for (let i = this.coinList.lastSearchIndex; i < this.coinList.list.length; i += 1) {
-      const ticker = this.coinList.list[i];
-      if (ticker.startsWith(str.toUpperCase())) {
-        suggested.push(ticker);
-        if (suggested.length === needSuggested) {
-          this.coinList.lastSearchIndex = i;
-          break;
-        }
-      }
-    }
-
-    return suggested.map((name) => this.coinList.map[name]);
   }
 }
