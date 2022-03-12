@@ -2,7 +2,7 @@
 import {
   ref, onMounted, onBeforeUnmount, reactive, watch, nextTick, computed,
 } from 'vue';
-import Client from './assets/api.js';
+import Client from '@/api/api.js';
 
 const client = new Client();
 
