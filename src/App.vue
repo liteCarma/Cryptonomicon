@@ -117,9 +117,14 @@ function addTicker() {
   saveTickers();
 }
 
+function formatPrice(price) {
+  if (Number.isNaN(Number(price))) return price;
+  return price > 1 ? price.toFixed(2) : price.toPrecision(2);
+}
+
 function updateTicker({ name, price }) {
   const ticker = tickerData.tickerList.find((t) => t.name === name);
-  ticker.price = price > 0 ? price.toFixed(2) : price.toPrecision(2);
+  ticker.price = price;
 
   if (ticker.name === tickerData.selectedTicker?.name) {
     resizeGraph();
@@ -336,7 +341,7 @@ function loadSearchParameters() {
                 {{ ticker.name }} - USD
               </dt>
               <dd class="mt-1 text-3xl font-semibold text-gray-900">
-                {{ ticker.price }}
+                {{ formatPrice(ticker.price) }}
               </dd>
             </div>
             <div class="w-full border-t border-gray-200" />
