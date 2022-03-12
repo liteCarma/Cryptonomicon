@@ -41,22 +41,17 @@ const tickerData = reactive({
 });
 
 loadSearchParameters();
-
 tickerData.tickerList.forEach((t) => client.subscribe(t.name, updateTicker));
 
 const suggestedTickers = computed(() => getSuggested(tickerData.ticker, 4));
-
 const filteredTickers = computed(() => tickerData.tickerList.filter((t) => t.name.includes(tickerData.filter.toUpperCase())));
-
-const paginatedTickers = computed(() => {
-  const start = (tickerData.page - 1) * TICKERS_ON_PAGE;
-  const end = tickerData.page * TICKERS_ON_PAGE;
-  return filteredTickers.value.slice(start, end);
-});
-
-const hasNextPage = computed(() => filteredTickers.value.length > tickerData.page * TICKERS_ON_PAGE);
+const paginationStart = computed(() => (tickerData.page - 1) * TICKERS_ON_PAGE);
+const paginationEnd = computed(() => tickerData.page * TICKERS_ON_PAGE);
+const paginatedTickers = computed(() => filteredTickers.value.slice(paginationStart.value, paginationEnd.value));
+const hasNextPage = computed(() => filteredTickers.value.length > paginationEnd.value);
 
 watch(paginatedTickers, () => {
+  if (paginatedTickers.value.length === 0 && tickerData.page > 1) tickerData.page -= 1;
   const url = new URL(window.location);
   url.searchParams.set('page', tickerData.page);
   url.searchParams.set('filter', tickerData.filter);
@@ -67,6 +62,14 @@ watch(() => tickerData.filter, () => {
   tickerData.page = 1;
 });
 
+watch(() => tickerData.ticker, () => {
+  tickerData.showTickerError = false;
+});
+
+watch(() => tickerData.tickerList, () => {
+  localStorage.setItem('tickers', JSON.stringify(tickerData.tickerList));
+}, { deep: true });
+
 const graphContainer = ref(null);
 const graphMaxBars = Math.floor(window.screen.availWidth / BAR_WIDTH);
 
@@ -76,19 +79,25 @@ const graph = reactive({
   visibleBars: 1,
 });
 
-const loaderShow = ref(true);
-
-onMounted(() => {
-  loaderShow.value = false;
-});
-
 watch(() => tickerData.selectedTicker, () => {
   graph.bars = [];
   nextTick(calculateGraphVisibleBars);
 });
 
-watch(() => tickerData.ticker, () => {
-  tickerData.showTickerError = false;
+const visibleGraph = computed(() => {
+  const visible = graph.bars.slice(-graph.visibleBars).map((price, i, arr) => {
+    const max = Math.max(...arr);
+    const min = Math.min(...arr);
+    if (max === min) return 50;
+    return 5 + ((price - min) * 100) / (max - min);
+  });
+  return visible;
+});
+
+const loaderShow = ref(true);
+
+onMounted(() => {
+  loaderShow.value = false;
 });
 
 window.addEventListener('resize', calculateGraphVisibleBars);
@@ -114,7 +123,6 @@ function addTicker() {
 
   tickerData.tickerList.push(newTicker);
   client.subscribe(newTicker.name, updateTicker);
-  saveTickers();
 }
 
 function formatPrice(price) {
@@ -138,7 +146,6 @@ function removeTicker(ticker) {
   if (tickerData.selectedTicker === ticker) {
     tickerData.selectedTicker = null;
   }
-  saveTickers();
 }
 
 function resizeGraph() {
@@ -148,25 +155,10 @@ function resizeGraph() {
   }
 }
 
-function normilizeGraph(price) {
-  const visibleBars = getVisibleBars();
-  const max = Math.max(...visibleBars);
-  const min = Math.min(...visibleBars);
-  return 5 + ((price - min) * 100) / (max - min);
-}
-
 function calculateGraphVisibleBars() {
   if (!graphContainer.value) return;
   graph.visibleBars = Math.floor(graphContainer.value.clientWidth / BAR_WIDTH);
   resizeGraph();
-}
-
-function getVisibleBars() {
-  const diff = graph.visibleBars - graph.bars.length;
-  if (diff < 0) {
-    return graph.bars.slice(-graph.visibleBars);
-  }
-  return graph.bars;
 }
 
 function getSuggested(str, needSuggested) {
@@ -190,10 +182,6 @@ function getSuggested(str, needSuggested) {
 function suggestedClick(ticker) {
   tickerData.ticker = ticker.toUpperCase();
   nextTick(addTicker);
-}
-
-function saveTickers() {
-  localStorage.setItem('tickers', JSON.stringify(tickerData.tickerList));
 }
 
 function loadSearchParameters() {
@@ -378,10 +366,10 @@ function loadSearchParameters() {
           class="flex items-end border-gray-600 border-b border-l h-64"
         >
           <div
-            v-for="(bar, index) in getVisibleBars()"
+            v-for="(bar, index) in visibleGraph"
             :key="index"
             class="graph-bar bg-purple-800 border w-10"
-            :style="{height: `${normilizeGraph(bar)}%`}"
+            :style="{height: `${bar}%`}"
           >
             <button
               type="button"
