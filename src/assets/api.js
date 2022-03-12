@@ -5,11 +5,7 @@ export default class Client {
   constructor(apiKey) {
     this.events = new EventEmitter();
     this.apiKey = apiKey || config.apiKey;
-    this.coinList = {
-      list: [],
-      map: {},
-      lastSearchIndex: 0,
-    };
+    this.BTCUSD = 0;
     this.getCoinList();
     this.connect();
   }
@@ -19,9 +15,29 @@ export default class Client {
     this.ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (data.TYPE === '5' && data.PRICE) {
-        this.events.emit(`update:${data.FROMSYMBOL}`, {
-          name: data.FROMSYMBOL,
-          price: data.PRICE,
+        let { PRICE: price } = data;
+        const { FROMSYMBOL: fromSymbvol, TOSYMBOL: toSymbvol } = data;
+
+        if (fromSymbvol === 'BTC' && toSymbvol === 'USD') {
+          this.BTCUSD = price;
+        }
+
+        if (toSymbvol !== 'USD' && this.BTCUSD !== 0) {
+          price *= this.BTCUSD;
+        }
+
+        this.events.emit(`update:${fromSymbvol}`, {
+          name: fromSymbvol,
+          price,
+        });
+      }
+
+      if (data.TYPE === '500' && data.MESSAGE === 'INVALID_SUB') {
+        const { from: fromSymbvol, to: toSymbvol } = data.PARAMETER.match(/~(?<from>[^~]+)~(?<to>[^~]+)$/).groups;
+        if (toSymbvol === 'BTC') return;
+        this.send({
+          action: 'SubAdd',
+          subs: [`5~CCCAGG~${fromSymbvol}~BTC`],
         });
       }
     };
