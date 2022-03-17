@@ -119,6 +119,7 @@ function addTicker() {
   const newTicker = reactive({
     name: ticker,
     price: '-',
+    error: null,
   });
 
   tickerData.tickerList.push(newTicker);
@@ -130,8 +131,13 @@ function formatPrice(price) {
   return price > 1 ? price.toFixed(2) : price.toPrecision(2);
 }
 
-function updateTicker({ name, price }) {
+function updateTicker({ error, name, price }) {
   const ticker = tickerData.tickerList.find((t) => t.name === name);
+  if (error) {
+    ticker.error = error;
+    return;
+  }
+
   ticker.price = price;
 
   if (ticker.name === tickerData.selectedTicker?.name) {
@@ -329,6 +335,12 @@ function loadSearchParameters() {
                 {{ ticker.name }} - USD
               </dt>
               <dd class="mt-1 text-3xl font-semibold text-gray-900">
+                <p
+                  v-if="ticker.error"
+                  class="text-sm font-medium text-red-500"
+                >
+                  {{ ticker.error }}
+                </p>
                 {{ formatPrice(ticker.price) }}
               </dd>
             </div>

@@ -1,6 +1,9 @@
 import { EventEmitter } from 'events';
 import config from '@/../config.js';
 
+const AGGREGATE_INDEX = '5';
+const AGGREGATE_INDEX_ERROR = '500';
+
 export default class Client {
   constructor(apiKey) {
     this.events = new EventEmitter();
@@ -14,7 +17,7 @@ export default class Client {
     this.ws = new WebSocket(`wss://streamer.cryptocompare.com/v2?api_key=${this.apiKey}`);
     this.ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      if (data.TYPE === '5' && data.PRICE) {
+      if (data.TYPE === AGGREGATE_INDEX && data.PRICE) {
         let { PRICE: price } = data;
         const { FROMSYMBOL: fromSymbvol, TOSYMBOL: toSymbvol } = data;
 
@@ -27,14 +30,23 @@ export default class Client {
         }
 
         this.events.emit(`update:${fromSymbvol}`, {
+          error: null,
           name: fromSymbvol,
           price,
         });
       }
 
-      if (data.TYPE === '500' && data.MESSAGE === 'INVALID_SUB') {
+      if (data.TYPE === AGGREGATE_INDEX_ERROR && data.MESSAGE === 'INVALID_SUB') {
         const { from: fromSymbvol, to: toSymbvol } = data.PARAMETER.match(/~(?<from>[^~]+)~(?<to>[^~]+)$/).groups;
-        if (toSymbvol === 'BTC') return;
+        if (toSymbvol === 'BTC') {
+          this.events.emit(`update:${fromSymbvol}`, {
+            error: 'Subscription is invalid',
+            name: fromSymbvol,
+            price: '-',
+          });
+          return;
+        }
+
         this.send({
           action: 'SubAdd',
           subs: [`5~CCCAGG~${fromSymbvol}~BTC`],
