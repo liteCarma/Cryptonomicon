@@ -380,8 +380,11 @@ function loadSearchParameters() {
           <div
             v-for="(bar, index) in visibleGraph"
             :key="index"
-            class="graph-bar bg-purple-800 border w-10"
-            :style="{height: `${bar}%`}"
+            class="graph-bar bg-purple-800 border"
+            :style="{
+              height: `${bar}%`,
+              width: `${BAR_WIDTH}px`
+            }"
           >
             <button
               type="button"
