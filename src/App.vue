@@ -141,7 +141,10 @@ function updateTicker({ error, name, price }) {
   ticker.price = price;
 
   if (ticker.name === tickerData.selectedTicker?.name) {
-    resizeGraph();
+    if (graph.bars.length >= graphMaxBars) {
+      const newSize = graphMaxBars - 1;
+      graph.bars = graph.bars.splice(-newSize);
+    }
     graph.bars.push(price);
   }
 }
@@ -154,17 +157,9 @@ function removeTicker(ticker) {
   }
 }
 
-function resizeGraph() {
-  if (graph.bars.length >= graphMaxBars) {
-    const newSize = graphMaxBars - 1;
-    graph.bars = graph.bars.splice(-newSize);
-  }
-}
-
 function calculateGraphVisibleBars() {
   if (!graphContainer.value) return;
   graph.visibleBars = Math.floor(graphContainer.value.clientWidth / BAR_WIDTH);
-  resizeGraph();
 }
 
 function getSuggested(str, needSuggested) {
