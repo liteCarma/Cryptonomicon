@@ -6,28 +6,6 @@ import Client from '@/api/api.js';
 
 const client = new Client();
 
-const coinList = {
-  list: [],
-  map: {},
-  lastSearchIndex: 0,
-};
-
-client.getCoinList()
-  .then((data) => {
-    const symbols = [];
-    const fullnames = [];
-    Object.values(data).forEach(({ Symbol, FullName }) => {
-      const symbol = Symbol.toUpperCase();
-      const fullname = FullName.toUpperCase().replace(/[\u200b]/, '');
-      coinList.map[symbol] = symbol;
-      coinList.map[fullname] = symbol;
-      symbols.push(Symbol);
-      fullnames.push(fullname);
-    });
-
-    coinList.list = [...symbols.sort(), ...fullnames.sort()];
-  });
-
 const TICKERS_ON_PAGE = 6;
 const BAR_WIDTH = 38;
 
@@ -43,7 +21,7 @@ const tickerData = reactive({
 loadSearchParameters();
 tickerData.tickerList.forEach((t) => client.subscribe(t.name, updateTicker));
 
-const suggestedTickers = computed(() => getSuggested(tickerData.ticker, 4));
+const suggestedTickers = computed(() => client.getSuggested(tickerData.ticker, 4));
 const filteredTickers = computed(() => tickerData.tickerList.filter((t) => t.name.includes(tickerData.filter.toUpperCase())));
 const paginationStart = computed(() => (tickerData.page - 1) * TICKERS_ON_PAGE);
 const paginationEnd = computed(() => tickerData.page * TICKERS_ON_PAGE);
@@ -160,24 +138,6 @@ function removeTicker(ticker) {
 function calculateGraphVisibleBars() {
   if (!graphContainer.value) return;
   graph.visibleBars = Math.floor(graphContainer.value.clientWidth / BAR_WIDTH);
-}
-
-function getSuggested(str, needSuggested) {
-  if (str.length <= coinList.lastSearchIndex) coinList.lastSearchIndex = 0;
-  if (!coinList.list || !str) return [];
-  const suggested = [];
-  for (let i = coinList.lastSearchIndex; i < coinList.list.length; i += 1) {
-    const ticker = coinList.list[i];
-    if (ticker.startsWith(str.toUpperCase())) {
-      suggested.push(ticker);
-      if (suggested.length === needSuggested) {
-        coinList.lastSearchIndex = i;
-        break;
-      }
-    }
-  }
-
-  return suggested.map((name) => coinList.map[name]);
 }
 
 function suggestedClick(ticker) {

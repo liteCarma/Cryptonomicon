@@ -9,6 +9,11 @@ export default class Client {
     this.events = new EventEmitter();
     this.apiKey = apiKey || config.apiKey;
     this.BTCUSD = 0;
+    this.coinList = {
+      list: [],
+      map: {},
+      lastSearchIndex: 0,
+    };
     this.getCoinList();
     this.connect();
   }
@@ -93,7 +98,38 @@ export default class Client {
   getCoinList() {
     return fetch(`https://min-api.cryptocompare.com/data/all/coinlist?api_key=${this.apiKey}&summary=true`)
       .then((r) => r.json())
-      .then(({ Data }) => Data)
+      .then(({ Data: data }) => {
+        const symbols = [];
+        const fullnames = [];
+        Object.values(data).forEach(({ Symbol, FullName }) => {
+          const symbol = Symbol.toUpperCase();
+          const fullname = FullName.toUpperCase().replace(/[\u200b]/, '');
+          this.coinList.map[symbol] = symbol;
+          this.coinList.map[fullname] = symbol;
+          symbols.push(Symbol);
+          fullnames.push(fullname);
+        });
+
+        this.coinList.list = [...symbols.sort(), ...fullnames.sort()];
+      })
       .catch(() => []);
+  }
+
+  getSuggested(str, needSuggested) {
+    if (str.length <= this.coinList.lastSearchIndex) this.coinList.lastSearchIndex = 0;
+    if (!this.coinList.list || !str) return [];
+    const suggested = [];
+    for (let i = this.coinList.lastSearchIndex; i < this.coinList.list.length; i += 1) {
+      const ticker = this.coinList.list[i];
+      if (ticker.startsWith(str.toUpperCase())) {
+        suggested.push(ticker);
+        if (suggested.length === needSuggested) {
+          this.coinList.lastSearchIndex = i;
+          break;
+        }
+      }
+    }
+
+    return suggested.map((name) => this.coinList.map[name]);
   }
 }
