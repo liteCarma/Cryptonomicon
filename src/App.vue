@@ -3,6 +3,7 @@ import {
   ref, onMounted, onBeforeUnmount, reactive, watch, nextTick, computed,
 } from 'vue';
 import Client from '@/api/api.js';
+import { updateTickersStorage, loadTickerStorage, onUpdateTickers } from '@/api/storage.js';
 
 const client = new Client();
 
@@ -12,10 +13,14 @@ const BAR_WIDTH = 38;
 const tickerData = reactive({
   ticker: '',
   selectedTicker: null,
-  tickerList: JSON.parse(localStorage.getItem('tickers') || '[]'),
+  tickerList: loadTickerStorage(),
   showTickerError: false,
   filter: '',
   page: 1,
+});
+
+onUpdateTickers((tickers) => {
+  tickerData.tickerList = tickers;
 });
 
 loadSearchParameters();
@@ -52,9 +57,7 @@ watch(() => tickerData.ticker, () => {
   tickerData.showTickerError = false;
 });
 
-watch(() => tickerData.tickerList, () => {
-  localStorage.setItem('tickers', JSON.stringify(tickerData.tickerList));
-}, { deep: true });
+watch(() => tickerData.tickerList, () => updateTickersStorage(tickerData.tickerList), { deep: true });
 
 const graphContainer = ref(null);
 const graphMaxBars = Math.floor(window.screen.availWidth / BAR_WIDTH);
