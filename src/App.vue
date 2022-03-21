@@ -29,7 +29,15 @@ const paginatedTickers = computed(() => filteredTickers.value.slice(paginationSt
 const hasNextPage = computed(() => filteredTickers.value.length > paginationEnd.value);
 
 watch(paginatedTickers, () => {
-  if (paginatedTickers.value.length === 0 && tickerData.page > 1) tickerData.page -= 1;
+  if (paginatedTickers.value.length === 0 && tickerData.page > 1) {
+    tickerData.page -= 1;
+  }
+});
+
+watch([
+  () => tickerData.filter,
+  () => tickerData.page,
+], () => {
   const url = new URL(window.location);
   url.searchParams.set('page', tickerData.page);
   url.searchParams.set('filter', tickerData.filter);
