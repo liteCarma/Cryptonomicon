@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events';
 import config from '@/../config.js';
 
-const worker = new SharedWorker('./src/api/worker.js');
+const worker = new SharedWorker('./src/api/worker.ts');
 worker.port.start();
 
 const AGGREGATE_INDEX = '5';

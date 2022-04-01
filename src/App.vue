@@ -2,8 +2,8 @@
 import {
   ref, onMounted, onBeforeUnmount, reactive, watch, nextTick, computed,
 } from 'vue';
-import Client from '@/api/api.js';
-import { updateTickersStorage, loadTickerStorage, onUpdateTickers } from '@/api/storage.js';
+import Client from '@/api/api.ts';
+import { updateTickersStorage, loadTickerStorage, onUpdateTickers } from '@/api/storage.ts';
 
 const client = new Client();
 
