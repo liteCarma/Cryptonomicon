@@ -28,9 +28,7 @@ function checkDiffStorage(tickers) {
 }
 
 export function updateTickersStorage(tickers) {
-  if (checkDiffStorage(tickers)) {
-    setStorage(TICKERS_STORAGE_KEY, tickers);
-  }
+  setStorage(TICKERS_STORAGE_KEY, tickers);
 }
 
 export function loadTickerStorage() {

@@ -17,6 +17,12 @@ export default class Client {
       map: {},
       lastSearchIndex: 0,
     };
+
+    Client.send({
+      action: 'connect',
+      apikey: this.apiKey,
+    });
+
     this.getCoinList();
     worker.port.addEventListener('message', ({ data }) => {
       this.onmessage(data);
