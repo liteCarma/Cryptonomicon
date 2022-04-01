@@ -6,7 +6,7 @@ const TICKERS_STORAGE_KEY = 'tickers';
 
 function checkDiffStorage(tickers) {
   const jsonValue = JSON.stringify(tickers);
-  const jsonFromStorage = window.localStorage.getItem(TICKERS_STORAGE_KEY);
+  const jsonFromStorage = window.localStorage.getItem(TICKERS_STORAGE_KEY) || '[]';
 
   if (jsonValue === jsonFromStorage) {
     return false;
